@@ -303,7 +303,7 @@ OGRGeometry* OGRESRIJSONReader::ReadGeometry( json_object* poObj )
         poGeometry = OGRESRIJSONReadPoint( poObj );
     else if( eType == wkbLineString )
         poGeometry = OGRESRIJSONReadLineString( poObj );
-    else if( eType == wkbPolygon )
+    else if( eType == wkbCurvePolygon )
         poGeometry = OGRESRIJSONReadPolygon( poObj );
     else if( eType == wkbMultiPoint )
         poGeometry = OGRESRIJSONReadMultiPoint( poObj );
@@ -345,8 +345,10 @@ OGRFeature* OGRESRIJSONReader::ReadFeature( json_object* poObj )
                 poFieldDefn = poFeature->GetFieldDefnRef(nField);
                 if( poFieldDefn && it.val != nullptr )
                 {
-                    if( EQUAL( it.key,  poLayer_->GetFIDColumn() ) )
+                    if( EQUAL( it.key,  poLayer_->GetFIDColumn() ) ) {
                         poFeature->SetFID( json_object_get_int( it.val ) );
+                        CPLDebug("ESRIJSON", "Processing FID: %d", json_object_get_int( it.val ) );
+                    }
                     if( poLayer_->GetLayerDefn()->
                             GetFieldDefn(nField)->GetType() == OFTReal )
                     {
@@ -492,7 +494,7 @@ OGRwkbGeometryType OGRESRIJSONGetGeometryType( json_object* poObj )
     else if( EQUAL( name, "esriGeometryPolyline" ) )
         return wkbLineString;
     else if( EQUAL( name, "esriGeometryPolygon" ) )
-        return wkbPolygon;
+        return wkbCurvePolygon;
     else if( EQUAL( name, "esriGeometryMultiPoint" ) )
         return wkbMultiPoint;
     else
@@ -855,10 +857,16 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
     json_object* poObjRings = OGRGeoJSONFindMemberByName( poObj, "rings" );
     if( nullptr == poObjRings )
     {
+      /* Rings not found, try curveRings */
+      poObjRings = OGRGeoJSONFindMemberByName( poObj, "curveRings" );
+
+      if( nullptr == poObjRings )
+      {
         CPLError( CE_Failure, CPLE_AppDefined,
             "Invalid Polygon object. "
-            "Missing \'rings\' member." );
+            "Missing \'rings\' or \'curveRings\' member." );
         return nullptr;
+      }
     }
 
     if( json_type_array != json_object_get_type( poObjRings ) )
@@ -885,46 +893,174 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
             return nullptr;
         }
 
-        OGRPolygon* poPoly = new OGRPolygon();
-        OGRLinearRing* poLine = new OGRLinearRing();
-        poPoly->addRingDirectly(poLine);
+        OGRCurvePolygon* poPoly = new OGRCurvePolygon();
+        OGRCompoundCurve *poCC = new OGRCompoundCurve();
+        poPoly->addRingDirectly(poCC);
+
+        OGRLineString* poLine = nullptr; // LinearRing->LineString, OGRCircularString, OGRCompoundCurve(contains LineString, CircularString) don't use directly
+
         papoGeoms[iRing] = poPoly;
+
+        int nNumCoords = 0;
+        double dfX = 0.0;
+        double dfY = 0.0;
+        double dfZ = 0.0;
+        double dfM = 0.0;
 
         const int nPoints = json_object_array_length( poObjRing );
         for( int i = 0; i < nPoints; i++ )
         {
-            int nNumCoords = 2;
+
             json_object* poObjCoords =
                 json_object_array_get_idx( poObjRing, i );
-            double dfX = 0.0;
-            double dfY = 0.0;
-            double dfZ = 0.0;
-            double dfM = 0.0;
-            if( !OGRESRIJSONReaderParseXYZMArray (
-              poObjCoords, bHasZ, bHasM, &dfX, &dfY, &dfZ, &dfM, &nNumCoords) )
-            {
-                for( int j = 0; j <= iRing; j++ )
-                    delete papoGeoms[j];
-                delete[] papoGeoms;
-                return nullptr;
-            }
 
-            if( nNumCoords == 3 && !bHasM )
-            {
-                poLine->addPoint( dfX, dfY, dfZ);
-            }
-            else if( nNumCoords == 3 )
-            {
-                poLine->addPointM( dfX, dfY, dfM);
-            }
-            else if( nNumCoords == 4 )
-            {
-                poLine->addPoint( dfX, dfY, dfZ, dfM);
+            if( json_type_array == json_object_get_type( poObjCoords ) ) {
+                if( nullptr == poLine ) {
+                    poLine = new OGRLineString();
+                    if( i > 0 ) {
+                        // We came from a circle
+                        OGRPoint* startPoint = new OGRPoint();
+                        poCC->EndPoint( startPoint );
+                        poLine->addPoint( startPoint );
+                        CPLDebug("ESRIJSON", "New Linestring starts at (%lf, %lf).", startPoint->getX(), startPoint->getY());
+                    }
+                }
+
+                nNumCoords = 2;
+                dfX = 0.0;
+                dfY = 0.0;
+                dfZ = 0.0;
+                dfM = 0.0;
+                if( !OGRESRIJSONReaderParseXYZMArray (
+                        poObjCoords, bHasZ, bHasM, &dfX, &dfY, &dfZ, &dfM, &nNumCoords) )
+                {
+                    for( int j = 0; j <= iRing; j++ )
+                        delete papoGeoms[j];
+                    delete[] papoGeoms;
+                    return nullptr;
+                }
+
+                if( nNumCoords == 3 && !bHasM )
+                {
+                    poLine->addPoint( dfX, dfY, dfZ);
+                }
+                else if( nNumCoords == 3 )
+                {
+                    poLine->addPointM( dfX, dfY, dfM);
+                }
+                else if( nNumCoords == 4 )
+                {
+                    poLine->addPoint( dfX, dfY, dfZ, dfM);
+                }
+                else
+                {
+                    CPLDebug("ESRIJSON", "Append point (%lf, %lf) to linestring.", dfX, dfY);
+                    poLine->addPoint( dfX, dfY );
+                }
             }
             else
             {
-                poLine->addPoint( dfX, dfY );
+				// Processing a CircularString ("c")
+
+                // Create CircularString
+                OGRCircularString* poCirc = new OGRCircularString();
+
+                // First point of CircularString, same as the previous last point.
+                OGRPoint* startPoint = new OGRPoint();
+                if( poLine != nullptr ) {
+                    // Previous point was from a linear segment.
+                    if( poLine->getNumPoints() > 1 ) {
+                        // Valid Line
+	                    poCC->addCurveDirectly(poLine);
+                    }
+                    // May only have had a single point, not a real line.
+                    poLine->EndPoint( startPoint );
+                    poLine = nullptr;
+                } else {
+                    // Previous point was from a circular segment.
+	                poCC->EndPoint( startPoint );
+                }
+                poCirc->addPoint( startPoint );
+                CPLDebug("ESRIJSON", "New circle starts at (%lf, %lf).", startPoint->getX(), startPoint->getY());
+                
+                // Get Points from JSON
+                json_object* poObjCirc = OGRGeoJSONFindMemberByName( poObjCoords, "c" );
+                json_object* poObjCircCenter = json_object_array_get_idx( poObjCirc, 1 );
+                json_object* poObjCircEnd = json_object_array_get_idx( poObjCirc, 0 );
+
+                // Center poObjCircCenter = poObjCoords.c[1]
+                nNumCoords = 2;
+                dfX = 0.0;
+                dfY = 0.0;
+                dfZ = 0.0;
+                dfM = 0.0;
+                if( !OGRESRIJSONReaderParseXYZMArray (
+                        poObjCircCenter, bHasZ, bHasM, &dfX, &dfY, &dfZ, &dfM, &nNumCoords) )
+                {
+                    for( int j = 0; j <= iRing; j++ )
+                        delete papoGeoms[j];
+                    delete[] papoGeoms;
+                    return nullptr;
+                }
+
+                if( nNumCoords == 3 && !bHasM )
+                {
+                    poCirc->addPoint( dfX, dfY, dfZ);
+                }
+                else if( nNumCoords == 3 )
+                {
+                    poCirc->addPointM( dfX, dfY, dfM);
+                }
+                else if( nNumCoords == 4 )
+                {
+                    poCirc->addPoint( dfX, dfY, dfZ, dfM);
+                }
+                else
+                {
+                    CPLDebug("ESRIJSON", "Circle mid-point: (%lf, %lf).", dfX, dfY);
+                    poCirc->addPoint( dfX, dfY );
+                }
+
+                // End poObjCircEnd = poObjCoords.c[0]
+                nNumCoords = 2;
+                dfX = 0.0;
+                dfY = 0.0;
+                dfZ = 0.0;
+                dfM = 0.0;
+
+                if( !OGRESRIJSONReaderParseXYZMArray (
+                        poObjCircEnd, bHasZ, bHasM, &dfX, &dfY, &dfZ, &dfM, &nNumCoords) )
+                {
+                    for( int j = 0; j <= iRing; j++ )
+                        delete papoGeoms[j];
+                    delete[] papoGeoms;
+                    return nullptr;
+                }
+
+                if( nNumCoords == 3 && !bHasM )
+                {
+                    poCirc->addPoint( dfX, dfY, dfZ);
+                }
+                else if( nNumCoords == 3 )
+                {
+                    poCirc->addPointM( dfX, dfY, dfM);
+                }
+                else if( nNumCoords == 4 )
+                {
+                    poCirc->addPoint( dfX, dfY, dfZ, dfM);
+                }
+                else
+                {
+                    CPLDebug("ESRIJSON", "Circle end-point: (%lf, %lf).", dfX, dfY);
+                    poCirc->addPoint( dfX, dfY );
+                }
+
+                poCC->addCurveDirectly( poCirc );
             }
+        }
+        if( poLine != nullptr ) {
+            poCC->addCurveDirectly(poLine);
+            poLine = nullptr;
         }
     }
 
