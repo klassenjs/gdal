@@ -303,7 +303,7 @@ OGRGeometry* OGRESRIJSONReader::ReadGeometry( json_object* poObj )
         poGeometry = OGRESRIJSONReadPoint( poObj );
     else if( eType == wkbLineString )
         poGeometry = OGRESRIJSONReadLineString( poObj );
-    else if( eType == wkbPolygon )
+    else if( eType == wkbCurvePolygon )
         poGeometry = OGRESRIJSONReadPolygon( poObj );
     else if( eType == wkbMultiPoint )
         poGeometry = OGRESRIJSONReadMultiPoint( poObj );
@@ -492,7 +492,7 @@ OGRwkbGeometryType OGRESRIJSONGetGeometryType( json_object* poObj )
     else if( EQUAL( name, "esriGeometryPolyline" ) )
         return wkbLineString;
     else if( EQUAL( name, "esriGeometryPolygon" ) )
-        return wkbPolygon;
+        return wkbCurvePolygon;
     else if( EQUAL( name, "esriGeometryMultiPoint" ) )
         return wkbMultiPoint;
     else
@@ -855,10 +855,16 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
     json_object* poObjRings = OGRGeoJSONFindMemberByName( poObj, "rings" );
     if( nullptr == poObjRings )
     {
+      /* Rings not found, try curveRings */
+      poObjRings = OGRGeoJSONFindMemberByName( poObj, "curveRings" );
+
+      if( nullptr == poObjRings )
+      {	
         CPLError( CE_Failure, CPLE_AppDefined,
             "Invalid Polygon object. "
-            "Missing \'rings\' member." );
+            "Missing \'rings\' or \'curveRings\' member." );
         return nullptr;
+      }
     }
 
     if( json_type_array != json_object_get_type( poObjRings ) )
@@ -885,11 +891,15 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
             return nullptr;
         }
 
-        OGRPolygon* poPoly = new OGRPolygon();
-        OGRLinearRing* poLine = new OGRLinearRing();
-        poPoly->addRingDirectly(poLine);
+        OGRCurvePolygon* poPoly = new OGRCurvePolygon();
+	OGRCompoundCurve *poCC = new OGRCompoundCurve();
+	poPoly->addRingDirectly(poCC);
+	
+        OGRLinearRing* poLine = new OGRLinearRing(); // LinearRing->LineString, OGRCircularString, OGRCompoundCurve(contains LineString, CircularString) don't use directly
+        poCC->addCurveDirectly(poLine);
         papoGeoms[iRing] = poPoly;
 
+	// if is array or is hash
         const int nPoints = json_object_array_length( poObjRing );
         for( int i = 0; i < nPoints; i++ )
         {
