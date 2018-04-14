@@ -443,7 +443,7 @@ int OGRGeoJSONLayer::TestCapability( const char * pszCap )
 
 {
     if( EQUAL(pszCap, OLCCurveGeometries) )
-        return FALSE;
+        return TRUE;
     return OGRMemLayer::TestCapability(pszCap);
 }
 
