@@ -901,7 +901,6 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
 
         papoGeoms[iRing] = poPoly;
 
-    // if is array or is hash
         int nNumCoords = 0;
         double dfX = 0.0;
         double dfY = 0.0;
@@ -925,7 +924,6 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                         poLine->addPoint( startPoint );
                         fprintf(stderr, "New Linestring starts at (%lf, %lf)\n", startPoint->getX(), startPoint->getY());
                     }
-                    //poCC->addCurveDirectly(poLine);
                 }
 
                 nNumCoords = 2;
@@ -962,26 +960,33 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
             }
             else
             {
-                // Expect curve
-                // End LineString
-                if( poLine != nullptr ) {
-                    poCC->addCurveDirectly(poLine);
-                    poLine = nullptr;
-                }
+				// Processing a CircularString ("c")
 
                 // Create CircularString
                 OGRCircularString* poCirc = new OGRCircularString();
 
-                // Add points
+                // First point of CircularString, same as the previous last point.
+                OGRPoint* startPoint = new OGRPoint();
+                if( poLine != nullptr ) {
+                    // Previous point was from a linear segment.
+                    if( poLine->getNumPoints() > 1 ) {
+                        // Valid Line
+	                    poCC->addCurveDirectly(poLine);
+                    }
+                    // May only have had a single point, not a real line.
+                    poLine->EndPoint( startPoint );
+                    poLine = nullptr;
+                } else {
+                    // Previous point was from a circular segment.
+	                poCC->EndPoint( startPoint );
+                }
+                poCirc->addPoint( startPoint );
+                fprintf(stderr, "New Circle starts at (%lf, %lf)\n", startPoint->getX(), startPoint->getY());
+                
+                // Get Points from JSON
                 json_object* poObjCirc = OGRGeoJSONFindMemberByName( poObjCoords, "c" );
                 json_object* poObjCircCenter = json_object_array_get_idx( poObjCirc, 1 );
                 json_object* poObjCircEnd = json_object_array_get_idx( poObjCirc, 0 );
-
-                // First point is same as the previous last point
-                OGRPoint* startPoint = new OGRPoint();
-                poCC->EndPoint( startPoint );
-                poCirc->addPoint( startPoint );
-                 fprintf(stderr, "New Circle starts at (%lf, %lf)\n", startPoint->getX(), startPoint->getY());
 
                 // Center poObjCircCenter = poObjCoords.c[1]
                 nNumCoords = 2;
