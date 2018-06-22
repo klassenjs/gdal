@@ -699,7 +699,7 @@ def ogr_geojson_16():
 
     extent = (2, 2, 49, 49)
 
-    rc = validate_layer(lyr, 'esripoint', 1, ogr.wkbPoint, 4, extent)
+    rc = validate_layer(lyr, 'esripoint', 1, ogr.wkbPoint, 5, extent)
     if not rc:
         return 'fail'
 
@@ -729,6 +729,10 @@ def ogr_geojson_16():
         return 'fail'
 
     if feature.GetFieldAsString('fooString') != '56':
+        feature.DumpReadable()
+        return 'fail'
+
+    if feature.GetFieldAsDateTime('fooDate') != [2018, 2, 8, 3, 12, 20.0, 100]:
         feature.DumpReadable()
         return 'fail'
 
