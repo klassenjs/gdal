@@ -1,0 +1,98 @@
+{
+ "displayFieldName": "OBJECTID",
+ "fieldAliases": {
+  "OBJECTID": "OBJECTID"
+ },
+ "geometryType": "esriGeometryPolygon",
+ "spatialReference" : {
+   "wkid" : 4326
+ },
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID"
+  }
+ ],
+ "features": [
+  {
+   "attributes": {
+    "OBJECTID": 123456
+   },
+   "geometry": {
+    "curveRings": [
+     [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       1
+      ],
+      {
+       "c": [
+        [
+         3,
+         1
+        ],
+        [
+         2,
+         2
+        ]
+       ]
+      },
+      {
+       "c": [
+        [
+         5,
+         1
+        ],
+        [
+         4,
+         2
+        ]
+       ]
+      },
+      {
+       "c": [
+        [
+         7,
+         1
+        ],
+        [
+         6,
+         2
+        ]
+       ]
+      },
+      [
+       8,
+       1
+      ],
+      {
+       "c": [
+        [
+         10,
+         1
+        ],
+        [
+         9,
+         2
+        ]
+       ]
+      },
+      [
+       10,
+       10
+      ],
+      [
+       1,
+       1
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

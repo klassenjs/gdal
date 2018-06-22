@@ -3912,6 +3912,58 @@ def ogr_geojson_68():
         return 'fail'
     return 'success'
 
+
+###############################################################################
+# Test reading ESRI curve file
+
+def ogr_geojson_69():
+
+    if gdaltest.geojson_drv is None:
+        return 'skip'
+
+    ds = ogr.Open('data/esrijsoncurve.json')
+    if ds is None:
+        gdaltest.post_reason('Failed to open datasource')
+        return 'fail'
+
+    if ds.GetLayerCount() is not 1:
+        gdaltest.post_reason('Wrong number of layers')
+        return 'fail'
+
+    lyr = ds.GetLayerByName('esrijsoncurve')
+    if lyr is None:
+        gdaltest.post_reason('Missing layer called esrijsoncurve')
+        return 'fail'
+
+    extent = (1, 10, 1, 10)
+
+    rc = validate_layer(lyr, 'esrijsoncurve', 1, ogr.wkbCurvePolygon, 1, extent)
+    if not rc:
+        return 'fail'
+
+    ref = lyr.GetSpatialRef()
+    gcs = int(ref.GetAuthorityCode('GEOGCS'))
+
+    if gcs != 4326:
+        gdaltest.post_reason("Spatial reference was not valid")
+        return 'fail'
+
+    feature = lyr.GetNextFeature()
+    ref_geom = ogr.CreateGeometryFromWkt('CURVEPOLYGON (COMPOUNDCURVE ((1 1,2 1),CIRCULARSTRING (2 1,2 2,3 1),CIRCULARSTRING (3 1,4 2,5 1),CIRCULARSTRING (5 1,6 2,7 1),(7 1,8 1),CIRCULARSTRING (8 1,9 2,10 1),(10 1,10 10,1 1)))')
+
+    if ogrtest.check_feature_geometry(feature, ref_geom) != 0:
+        feature.DumpReadable()
+        return 'fail'
+
+    if feature.GetFID() != 123456:
+        feature.DumpReadable()
+        return 'fail'
+
+    lyr = None
+    ds = None
+
+    return 'success'
+
 ###############################################################################
 
 
@@ -4204,6 +4256,7 @@ gdaltest_list = [
     ogr_geojson_66,
     ogr_geojson_67,
     ogr_geojson_68,
+    ogr_geojson_69,
     ogr_geojson_id_field_and_id_type,
     ogr_geojson_geom_export_failure,
     ogr_geojson_starting_with_crs,
