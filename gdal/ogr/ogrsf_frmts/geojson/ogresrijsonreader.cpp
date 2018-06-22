@@ -347,7 +347,7 @@ OGRFeature* OGRESRIJSONReader::ReadFeature( json_object* poObj )
                 {
                     if( EQUAL( it.key,  poLayer_->GetFIDColumn() ) ) {
                         poFeature->SetFID( json_object_get_int( it.val ) );
-                        fprintf(stderr, "FID: %d\n", json_object_get_int( it.val ) );
+                        CPLDebug("ESRIJSON", "Processing FID: %d", json_object_get_int( it.val ) );
                     }
                     if( poLayer_->GetLayerDefn()->
                             GetFieldDefn(nField)->GetType() == OFTReal )
@@ -922,7 +922,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                         OGRPoint* startPoint = new OGRPoint();
                         poCC->EndPoint( startPoint );
                         poLine->addPoint( startPoint );
-                        fprintf(stderr, "New Linestring starts at (%lf, %lf)\n", startPoint->getX(), startPoint->getY());
+                        CPLDebug("ESRIJSON", "New Linestring starts at (%lf, %lf).", startPoint->getX(), startPoint->getY());
                     }
                 }
 
@@ -954,7 +954,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                 }
                 else
                 {
-                    fprintf(stderr, "addPoint(%lf, %lf)\n", dfX, dfY);
+                    CPLDebug("ESRIJSON", "Append point (%lf, %lf) to linestring.", dfX, dfY);
                     poLine->addPoint( dfX, dfY );
                 }
             }
@@ -981,7 +981,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
 	                poCC->EndPoint( startPoint );
                 }
                 poCirc->addPoint( startPoint );
-                fprintf(stderr, "New Circle starts at (%lf, %lf)\n", startPoint->getX(), startPoint->getY());
+                CPLDebug("ESRIJSON", "New circle starts at (%lf, %lf).", startPoint->getX(), startPoint->getY());
                 
                 // Get Points from JSON
                 json_object* poObjCirc = OGRGeoJSONFindMemberByName( poObjCoords, "c" );
@@ -1017,7 +1017,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                 }
                 else
                 {
-                    fprintf(stderr, "Circ Middle(%lf, %lf)\n", dfX, dfY);
+                    CPLDebug("ESRIJSON", "Circle mid-point: (%lf, %lf).", dfX, dfY);
                     poCirc->addPoint( dfX, dfY );
                 }
 
@@ -1051,7 +1051,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                 }
                 else
                 {
-                    fprintf(stderr, "Circ End(%lf, %lf)\n", dfX, dfY);
+                    CPLDebug("ESRIJSON", "Circle end-point: (%lf, %lf).", dfX, dfY);
                     poCirc->addPoint( dfX, dfY );
                 }
 
