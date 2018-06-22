@@ -28,6 +28,12 @@
       "type" : "esriFieldTypeString",
       "length" : 50
     },
+    {
+      "name": "fooDate",
+      "alias": "fooDateate",
+      "type": "esriFieldTypeDate",
+      "length": 8
+    }
   ],
   "features" : [
     {
@@ -40,6 +46,7 @@
         "fooInt" : 2,
         "fooDouble" : 3.4,
         "fooString" : "56",
+        "fooDate" : 1518059540000
       }
     }
   ]
