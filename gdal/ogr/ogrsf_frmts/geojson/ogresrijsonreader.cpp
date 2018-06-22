@@ -960,7 +960,7 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
             }
             else
             {
-				// Processing a CircularString ("c")
+                // Processing a CircularString ("c")
 
                 // Create CircularString
                 OGRCircularString* poCirc = new OGRCircularString();
@@ -971,18 +971,18 @@ OGRGeometry* OGRESRIJSONReadPolygon( json_object* poObj)
                     // Previous point was from a linear segment.
                     if( poLine->getNumPoints() > 1 ) {
                         // Valid Line
-	                    poCC->addCurveDirectly(poLine);
+                        poCC->addCurveDirectly(poLine);
                     }
                     // May only have had a single point, not a real line.
                     poLine->EndPoint( startPoint );
                     poLine = nullptr;
                 } else {
                     // Previous point was from a circular segment.
-	                poCC->EndPoint( startPoint );
+                    poCC->EndPoint( startPoint );
                 }
                 poCirc->addPoint( startPoint );
                 CPLDebug("ESRIJSON", "New circle starts at (%lf, %lf).", startPoint->getX(), startPoint->getY());
-                
+
                 // Get Points from JSON
                 json_object* poObjCirc = OGRGeoJSONFindMemberByName( poObjCoords, "c" );
                 json_object* poObjCircCenter = json_object_array_get_idx( poObjCirc, 1 );
