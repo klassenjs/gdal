@@ -443,7 +443,7 @@ int OGRGeoJSONLayer::TestCapability( const char * pszCap )
 
 {
     if( EQUAL(pszCap, OLCCurveGeometries) )
-        return TRUE;
+        return FALSE;
     return OGRMemLayer::TestCapability(pszCap);
 }
 
@@ -509,7 +509,7 @@ void OGRGeoJSONLayer::AddFeature( OGRFeature* poFeature )
         SetMetadataItem(OLMD_FID64, "YES");
 
     SetUpdatable( true );  // Temporary toggle on updatable flag.
-    CPL_IGNORE_RET_VAL(OGRMemLayer::SetFeature(poFeature));
+    CPL_IGNORE_RET_VAL(OGRMemLayer::ISetFeature(poFeature));
     SetUpdatable( poDS_->IsUpdatable() );
     SetUpdated( false );
 }
