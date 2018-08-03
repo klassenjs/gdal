@@ -351,7 +351,7 @@ OGRFeature* OGRESRIJSONReader::ReadFeature( json_object* poObj )
                         /* nTime is milliseconds since UNIX epoch */
 
                         time_t sec = (time_t)(nTime / 1000);
-                        float msec = nTime % 1000;
+                        float msec = (float)(nTime % 1000) / 1000.0;
 
                         struct tm val;
                         gmtime_r(&sec, &val);
