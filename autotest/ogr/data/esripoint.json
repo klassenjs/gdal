@@ -46,7 +46,7 @@
         "fooInt" : 2,
         "fooDouble" : 3.4,
         "fooString" : "56",
-        "fooDate" : 1518059540000
+        "fooDate" : 1518059540125
       }
     }
   ]

@@ -619,7 +619,7 @@ def test_ogr_geojson_16():
         feature.DumpReadable()
         pytest.fail()
 
-    if feature.GetFieldAsDateTime('fooDate') != [2018, 2, 8, 3, 12, 20.0, 100]:
+    if feature.GetFieldAsDateTime('fooDate') != [2018, 2, 8, 3, 12, 20.125, 100]:
         feature.DumpReadable()
         return 'fail'
 
