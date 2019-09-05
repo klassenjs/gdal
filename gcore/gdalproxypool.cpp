@@ -507,8 +507,8 @@ int GDALGetMaxDatasetPoolSize()
     int nSize = atoi(CPLGetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "100"));
     if (nSize < 2)
         nSize = 2;
-    else if (nSize > 1000)
-        nSize = 1000;
+    else if (nSize > 4000)
+        nSize = 4000;
     return nSize;
 }
 
