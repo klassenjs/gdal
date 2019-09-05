@@ -514,8 +514,8 @@ void GDALDatasetPool::Ref()
             atoi(CPLGetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "100"));
         if (l_maxSize < 2)
             l_maxSize = 2;
-        else if (l_maxSize > 1000)
-            l_maxSize = 1000;
+        else if (l_maxSize > 4000)
+            l_maxSize = 4000;
 
         // Try to not consume more than 25% of the usable RAM
         GIntBig l_nMaxRAMUsage =
