@@ -248,7 +248,7 @@ MAIN_START(argc, argv)
         if( hDriver )
             osFormat = GDALGetDriverShortName(hDriver);
 
-        if( GDALDatasetGetLayerCount(hTileIndexDS) == 1 )
+        if( GDALDatasetGetLayerCount(hTileIndexDS) == 1 && pszIndexLayerName == nullptr )
         {
             hLayer = GDALDatasetGetLayer(hTileIndexDS, 0);
         }
