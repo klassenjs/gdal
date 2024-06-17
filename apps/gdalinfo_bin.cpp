@@ -58,6 +58,8 @@ static void Usage()
 MAIN_START(argc, argv)
 
 {
+    int nRetCode = 0;
+
     EarlySetConfigOptions(argc, argv);
 
     /* -------------------------------------------------------------------- */
@@ -223,6 +225,9 @@ MAIN_START(argc, argv)
 
         CPLFree(pszGDALInfoOutput);
 
+        if (CPLGetErrorCounter() > 0)
+            nRetCode = 1;
+
         GDALClose(hDataset);
 #ifdef __AFL_HAVE_MANUAL_CONTROL
     }
@@ -236,7 +241,7 @@ MAIN_START(argc, argv)
 
     GDALDestroy();
 
-    exit(0);
+    exit(nRetCode);
 }
 
 MAIN_END
