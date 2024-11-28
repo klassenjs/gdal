@@ -570,7 +570,7 @@ GDALDatasetH GDALTileIndex(const char *pszDest, int nSrcCount,
         if (poDriver)
             osFormat = poDriver->GetDescription();
 
-        if (poTileIndexDS->GetLayerCount() == 1)
+        if (poTileIndexDS->GetLayerCount() == 1 && psOptions->osIndexLayerName.empty())
         {
             poLayer = poTileIndexDS->GetLayer(0);
         }
