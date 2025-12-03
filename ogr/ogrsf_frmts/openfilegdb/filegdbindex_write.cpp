@@ -463,15 +463,23 @@ static bool WriteIndex(
     if (asValues.size() > static_cast<size_t>(INT_MAX) ||
         // Maximum number of values for depth == 4: this evaluates to ~ 13
         // billion values (~ features)
-        asValues.size() > (((static_cast<uint64_t>(numMaxFeaturesPerPage) + 1) *
+        asValues.size() > ((((static_cast<uint64_t>(numMaxFeaturesPerPage) + 1) *
                                 numMaxFeaturesPerPage +
                             1) *
+                               numMaxFeaturesPerPage +
+                           1) *
                                numMaxFeaturesPerPage +
                            1) *
                               numMaxFeaturesPerPage)
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "More values in spatial index than can be handled");
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "asValues.size() = %ld, INT_MAX = %ld, max = %ld",
+		 asValues.size(),
+		 static_cast<size_t>(INT_MAX),
+		 ((((static_cast<uint64_t>(numMaxFeaturesPerPage) + 1) * numMaxFeaturesPerPage + 1) * numMaxFeaturesPerPage + 1) * numMaxFeaturesPerPage + 1) * numMaxFeaturesPerPage
+        );
         return false;
     }
 
@@ -748,7 +756,11 @@ static bool WriteIndex(
         // Write level 2 and level 3 pages
         WriteLastTwoLevelPages(2, nNumPagesLevel2, nNumFeaturePages);
     }
-    else
+    else if (nDepth == 4 ||
+             (nDepth == 0 &&
+              static_cast<int>(asValues.size()) <=
+                  (((numMaxFeaturesPerPage + 1) * numMaxFeaturesPerPage + 1) *
+                      numMaxFeaturesPerPage + 1) * numMaxFeaturesPerPage))
     {
         nDepth = 4;
 
@@ -775,6 +787,44 @@ static bool WriteIndex(
 
         // Write pages at level 3 and 4
         WriteLastTwoLevelPages(2 + nNumPagesLevel2, nNumPagesLevel3,
+                               nNumFeaturePages);
+    }
+    else
+    {
+        nDepth = 5;
+
+        const int nNumFeaturePages = static_cast<int>(
+            DIV_ROUND_UP(asValues.size(), numMaxFeaturesPerPage));
+        const int nNumPagesLevel4 =
+            nNumFeaturePages == 1
+                ? 1
+                : DIV_ROUND_UP(nNumFeaturePages - 1, numMaxFeaturesPerPage);
+        const int nNumPagesLevel3 =
+            nNumFeaturePages == 1
+                ? 1
+                : DIV_ROUND_UP(nNumPagesLevel4 - 1, numMaxFeaturesPerPage);
+        const int nNumPagesLevel2 =
+            nNumPagesLevel3 == 1
+                ? 1
+                : DIV_ROUND_UP(nNumPagesLevel3 - 1, numMaxFeaturesPerPage);
+        CPLAssert(nNumPagesLevel2 - 1 <= NUM_MAX_FEATURES_PER_PAGE);
+
+        // Write root page (level 1)
+        WriteRootPageNonLeaf(nNumPagesLevel2, numMaxFeaturesPerPage *
+                                                  numMaxFeaturesPerPage *
+                                                  numMaxFeaturesPerPage *
+                                                  numMaxFeaturesPerPage);
+
+        // Write pages at level 2 (referencing pages of level 3)
+        WriteIntermediatePages(2, nNumPagesLevel2, nNumPagesLevel3,
+                               numMaxFeaturesPerPage * numMaxFeaturesPerPage * numMaxFeaturesPerPage);
+
+        // Write pages at level 3 (referencing pages of level 4)
+        WriteIntermediatePages(2 + nNumPagesLevel2, nNumPagesLevel3, nNumPagesLevel4,
+                               numMaxFeaturesPerPage * numMaxFeaturesPerPage);
+
+        // Write pages at level 4 and 5
+        WriteLastTwoLevelPages(2 + nNumPagesLevel2 + nNumPagesLevel3, nNumPagesLevel4,
                                nNumFeaturePages);
     }
 

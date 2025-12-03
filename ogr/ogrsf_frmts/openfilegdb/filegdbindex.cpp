@@ -216,7 +216,7 @@ class FileGDBOrIterator final : public FileGDBIterator
 /*                       FileGDBIndexIteratorBase                       */
 /************************************************************************/
 
-constexpr int MAX_DEPTH = 3;
+constexpr int MAX_DEPTH = 4;
 constexpr int FGDB_PAGE_SIZE_V1 = 4096;
 constexpr int FGDB_PAGE_SIZE_V2 = 65536;
 constexpr int MAX_FGDB_PAGE_SIZE = FGDB_PAGE_SIZE_V2;
